@@ -16,7 +16,7 @@ pub fn index() -> String {
 
 #[launch]
 fn rocket() -> _ {
-    rocket::custom(rocket::config::Config::figment().merge(("port", 8000)))
+    rocket::custom(rocket::config::Config::figment().merge(("port", 8100)))
         .manage(Mutex::new(account_handler::AccountHandler::load()))
         .mount("/", routes![index])
         .mount("/save", routes![account_handler::save])

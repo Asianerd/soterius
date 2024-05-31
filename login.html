@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>soterius : login</title>
+        <link rel="shortcut icon" href="icon.ico">
+        <meta charset="utf-8">
+        <meta name="author" content="han_yuji_">
+        <script type="text/javascript" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <link rel="stylesheet" href="/styles/style.css">
+        <link rel="stylesheet" href="./login.css">
+    </head>
+    <body>
+        <div id="parent">
+            <div id="container">
+                <h1>ozmium.xyz</h1>
+                <h2 id="slogan">one account for the entire ecosystem</h2>
+                <h2 id="error"></h2>
+                <input id="username" type="text" placeholder="username">
+                <input id="password" type="password" placeholder="password">
+                <input id="confirm-password" type="password" placeholder="confirm password">
+
+                <h2 id="proceed" onclick="signup()">sign up</h2>
+                <h4 id="modeToggle" onclick="toggleMode()">have an account? login</h4>
+                <!-- dont have an account? sign up -->
+            </div>
+        </div>
+        <script src="/source.js"></script>
+        <script src="./login.js"></script>
+    </body>
+</html>

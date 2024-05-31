@@ -30,11 +30,11 @@ pub struct User {
 }
 impl User {
     pub fn save(account_handler: &AccountHandler) {
-        fs::write("data/users.json", serde_json::to_string_pretty(&account_handler.users).unwrap()).unwrap();
+        fs::write("../../data/users.json", serde_json::to_string_pretty(&account_handler.users).unwrap()).unwrap();
     }
 
     pub fn load() -> HashMap<u128, User> {
-        serde_json::from_str(fs::read_to_string("data/users.json").unwrap().as_str()).unwrap()
+        serde_json::from_str(fs::read_to_string("../../data/users.json").unwrap().as_str()).unwrap()
     }
 
     pub fn username_exists(account_handler: &AccountHandler, username: &String) -> bool {
@@ -164,13 +164,13 @@ pub struct LoginInformation {
 impl LoginInformation {
     // handles anything to do with password or logging in
     fn get_passwords() -> HashMap<u128, String> {
-        serde_json::from_str(fs::read_to_string("data/passwords.json").unwrap().as_str()).unwrap()
+        serde_json::from_str(fs::read_to_string("../../data/passwords.json").unwrap().as_str()).unwrap()
     }
 
     fn add_password(user_id: u128, password: &String) {
         let mut p = LoginInformation::get_passwords();
         p.insert(user_id, password.clone());
-        fs::write("data/passwords.json", serde_json::to_string_pretty(&p).unwrap()).unwrap();
+        fs::write("../../data/passwords.json", serde_json::to_string_pretty(&p).unwrap()).unwrap();
     }
 
     pub fn login(&self, account_handler: &AccountHandler) -> LoginResult {
