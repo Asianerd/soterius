@@ -11,7 +11,7 @@ use rocket::outcome::Outcome;
 use rocket::State;
 use serde::{Deserialize, Serialize};
 
-use crate::{account_handler::AccountHandler, utils};
+use crate::account_handler::AccountHandler;
 
 const USER_ID_MAX: u128 = 4294967296u128; // 16^8, 2^32
 const USER_ID_LENGTH: usize = 8usize; // number of letters for the code
@@ -25,16 +25,33 @@ const USER_ID_LENGTH: usize = 8usize; // number of letters for the code
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct User {
+    pub username: String,
+
     pub id: u128,
-    pub username: String
+    pub password: String
 }
 impl User {
     pub fn save(account_handler: &AccountHandler) {
-        fs::write("../../data/users.json", serde_json::to_string_pretty(&account_handler.users).unwrap()).unwrap();
+        fs::write("../../data/users.json", serde_json::to_string_pretty(&(
+            account_handler.users.clone()
+                .iter()
+                .map(
+                    |(id, u)| (u.username.clone(), (id.clone(), u.password.clone()))
+                )
+                .collect::<HashMap<String, (u128, String)>>()
+            )).unwrap()).unwrap();
     }
 
     pub fn load() -> HashMap<u128, User> {
-        serde_json::from_str(fs::read_to_string("../../data/users.json").unwrap().as_str()).unwrap()
+        let result: HashMap<String, (u128, String)> = serde_json::from_str(fs::read_to_string("../../data/users.json").unwrap().as_str()).unwrap();
+        result
+            .into_iter()
+            .map(|(k, v)| (v.0, User {
+                username: k.clone(),
+                id: v.0,
+                password: v.1.clone()
+            }))
+            .collect::<HashMap<u128, User>>()
     }
 
     pub fn username_exists(account_handler: &AccountHandler, username: &String) -> bool {
@@ -75,84 +92,6 @@ impl User {
             .map(|(id, _)| *id)
             .next()
     }
-
-    // #region user IDs
-    pub fn encode_id(user_id: &u128) -> String {
-        format!("{:0>8}", format!("{:X}", user_id).to_lowercase())
-    }
-
-    pub fn decode_id(code: &String) -> Option<u128> {
-        if !User::is_valid_code(&code) {
-            return None;
-        }
-
-        let code = User::sanitize_code(&code);
-        Some(i64::from_str_radix(code.as_str(), 16).unwrap() as u128)
-    }
-
-    pub fn sanitize_code(code: &String) -> String {
-        code.replace("#", "").replace("-", "")
-        // #1234-1234 -> 12341234
-    }
-
-    pub fn is_valid_code(code: &String) -> bool {
-        let code = User::sanitize_code(&code);
-        // in case they give in #XXXX-XXXX
-        if code.len() != USER_ID_LENGTH {
-            return false;
-        }
-        // is able to be converted back to u128
-        i64::from_str_radix(&code.as_str(), 16).is_ok()
-    }
-    // #endregion
-
-    // #region querying
-    pub fn query_username(account_handler: &AccountHandler, username: String) -> Vec<(u128, String, String)> { // id, 8 letter code, username
-        // returns vector of users containing the username/id
-        let mut result: Vec<(u128, String, String)> = vec![];
-        for u in account_handler.users.values() {
-            if result.len() >= 50 {
-                // show only 20 results
-                break;
-            }
-            if u.username.to_lowercase().contains(&(username.to_lowercase())) {
-                result.push((
-                    u.id.clone(),
-                    User::encode_id(&u.id.clone()),
-                    u.username.clone()
-                ));
-            }
-        }
-
-        if User::is_valid_code(&username) {
-            let user_id = User::decode_id(&username).unwrap();
-
-            if !account_handler.users.contains_key(&user_id) {
-                return result;
-            }
-
-            if !result.iter().map(|(i, _, _)| i.clone()).any(|i| i == user_id) {
-                // does not contain the one with correct ID
-                result.insert(0, (
-                    user_id,
-                    User::encode_id(&user_id),
-                    account_handler.users.get(&user_id).unwrap().username.clone()
-                ));
-            } else {
-                // bring the matching id to the top
-                for (index, u) in result.iter().enumerate() {
-                    if u.0 == user_id {
-                        let a = result.remove(index);
-                        result.insert(0, a);
-                        break;
-                    }
-                }
-            }
-        }
-
-        result
-    }
-    // #endregion
 }
 
 
@@ -162,23 +101,9 @@ pub struct LoginInformation {
     pub password: String
 }
 impl LoginInformation {
-    // handles anything to do with password or logging in
-    fn get_passwords() -> HashMap<u128, String> {
-        serde_json::from_str(fs::read_to_string("../../data/passwords.json").unwrap().as_str()).unwrap()
-    }
-
-    fn add_password(user_id: u128, password: &String) {
-        let mut p = LoginInformation::get_passwords();
-        p.insert(user_id, password.clone());
-        fs::write("../../data/passwords.json", serde_json::to_string_pretty(&p).unwrap()).unwrap();
-    }
-
     pub fn login(&self, account_handler: &AccountHandler) -> LoginResult {
         match User::lookup_user_id(account_handler, &self.username) {
-            Some(id) => match LoginInformation::get_passwords().get(&id) {
-                Some(p) => if self.password == *p { LoginResult::Success(id) } else { LoginResult::PasswordWrong },
-                None => LoginResult::PasswordNoExist
-            },
+            Some(id) => if account_handler.users.get(&id).unwrap().password == self.password { LoginResult::Success(id) } else { LoginResult::PasswordWrong },
             None => LoginResult::UsernameNoExist
         }
     }
@@ -191,9 +116,9 @@ impl LoginInformation {
         let id = User::generate_user_id(account_handler);
         account_handler.users.insert(id, User {
             id,
-            username: self.username.clone()
+            username: self.username.clone(),
+            password: self.password.clone()
         });
-        LoginInformation::add_password(id, &self.password);
         account_handler.save();
 
         LoginResult::Success(id)
@@ -246,7 +171,6 @@ pub enum LoginResult {
 }
 
 
-
 // #region api calls
 #[post("/", data="<login>")]
 pub fn login(db: &State<Mutex<AccountHandler>>, login: LoginInformation) -> String {
@@ -259,36 +183,3 @@ pub fn signup(db: &State<Mutex<AccountHandler>>, login: LoginInformation) -> Str
     let mut db = db.lock().unwrap();
     serde_json::to_string(&login.signup(&mut db)).unwrap()
 }
-
-// apply caching
-// remove username from cache when username is changed
-#[get("/<username>")]
-pub fn get_user_id(db: &State<Mutex<AccountHandler>>, username: String) -> String {
-    let db = db.lock().unwrap();
-    let result = User::lookup_user_id(&db, &username);
-    match result {
-        Some(id) => utils::parse_response_to_string(Ok(id)),
-        None => utils::parse_response_to_string(Err(result))
-    }
-}
-
-#[post("/", data="<login>")]
-pub fn get_code(db: &State<Mutex<AccountHandler>>, login: LoginInformation) -> String {
-    let db = db.lock().unwrap();
-    let result = login.login(&db);
-    match result {
-        LoginResult::Success(user_id) => utils::parse_response_to_string(Ok(User::encode_id(&user_id))),
-        _ => utils::parse_response_to_string(Err(result))
-    }
-}
-
-#[post("/<query_string>", data="<login>")]
-pub fn query_users(db: &State<Mutex<AccountHandler>>, login: LoginInformation, query_string: String) -> String {
-    let db = db.lock().unwrap();
-    let result = login.login(&db);
-    match result {
-        LoginResult::Success(_) => utils::parse_response_to_string(Ok(User::query_username(&db, urlencoding::decode(&query_string).unwrap().to_string()))),
-        _ => utils::parse_response_to_string(Err(result))
-    }
-}
-// #endregion

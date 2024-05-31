@@ -13,5 +13,3 @@ strum_macros = "0.26.2"
 
 rand = "0.8.4"
 rand_distr = "0.4.3"
-
-reqwest = "0.12.4"

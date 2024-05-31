@@ -38,7 +38,7 @@ function signup() {
         return;
     }
 
-    sendPostRequest(`${BACKEND_ADDRESS}/` + (container.ariaLabel == "login" ? "login" : "signup"), JSON.stringify({
+    sendPostRequest(`${SOTERIUS}/` + (container.ariaLabel == "login" ? "login" : "signup"), JSON.stringify({
         "username": username,
         "password": password
     }), (r) => {

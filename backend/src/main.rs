@@ -26,9 +26,6 @@ fn rocket() -> _ {
 
         .mount("/login", routes![user::login])
         .mount("/signup", routes![user::signup])
-        .mount("/lookup_username", routes![user::get_user_id])
-        .mount("/query_users", routes![user::query_users])
-        .mount("/get_code", routes![user::get_code])
 
         .attach(cors::CORS)
 }

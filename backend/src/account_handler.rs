@@ -50,7 +50,8 @@ pub fn generate_users(db: &State<Mutex<AccountHandler>>, number: usize) -> Strin
         let id = user::User::generate_user_id(&db);
         db.users.insert(id, user::User {
             id,
-            username: utils::generate_name(&mut rand::thread_rng())
+            username: utils::generate_name(&mut rand::thread_rng()),
+            password: "password".to_string()
         });
     }
     "success".to_string()
